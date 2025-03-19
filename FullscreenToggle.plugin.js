@@ -82,7 +82,7 @@ const config = {
       name: 'Custom Fullscreen Element',
       note: 'A CSS selector specifying the element to make fullscreen. Fullscreen Element must be set to "Custom"',
       placeholder: 'Ex: div.className > span#ID',
-      get value() { return settings.fullscreenElementCustom },
+      get value() { return settings.fullscreenElementCustom; },
     },
     {
       type: 'switch',
@@ -189,7 +189,7 @@ module.exports = class CollapsibleUI {
         settings: config.settings,
         onChange: (_, id, value) => {
           settings[id] = value;
-          
+
           this.stop();
           this.start();
         },
