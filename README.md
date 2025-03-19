@@ -1,5 +1,5 @@
 # BetterDiscord-FullscreenToggle
-A BetterDiscord plugin to easily make Discord fullscreen.
+A BetterDiscord plugin to easily make Discord fullscreen and customize its fullscreen behavior.
 
 #### [> Check out my other plugins <](https://github.com/programmer2514/BetterDiscord-Plugins)
 
