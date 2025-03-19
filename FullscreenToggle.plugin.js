@@ -3,7 +3,7 @@
  * @author programmer2514
  * @authorId 563652755814875146
  * @description A BetterDiscord plugin to easily make Discord fullscreen
- * @version 1.0.0
+ * @version 1.0.1
  * @donate https://ko-fi.com/benjaminpryor
  * @patreon https://www.patreon.com/BenjaminPryor
  * @website https://github.com/programmer2514/BetterDiscord-FullscreenToggle
@@ -34,6 +34,13 @@ const settings = {
 // Define plugin changelog and settings panel layout
 const config = {
   changelog: [
+    {
+      title: '1.0.1',
+      type: 'added',
+      items: [
+        'Removed unnecessary modules',
+      ],
+    },
     {
       title: '1.0.0',
       type: 'added',
@@ -115,8 +122,6 @@ const icons = {
 const modules = {
   get members() { return this._members ?? (this._members = runtime.api.Webpack.getByKeys('membersWrap', 'hiddenMembers', 'roleIcon')); },
   get icons() { return this._icons ?? (this._icons = runtime.api.Webpack.getByKeys('selected', 'iconWrapper', 'clickable', 'icon')); },
-  get dispatcher() { return this._dispatcher ?? (this._dispatcher = runtime.api.Webpack.getByKeys('dispatch', 'isDispatching')); },
-  get toolbar() { return this._toolbar ?? (this._toolbar = runtime.api.Webpack.getByKeys('updateIconForeground', 'search', 'forumOrHome')); },
   get guilds() { return this._guilds ?? (this._guilds = runtime.api.Webpack.getByKeys('chatContent', 'noChat', 'parentChannelName', 'linkedLobby')); },
   get app() { return this._app ?? (this._app = runtime.api.Webpack.getByKeys('appAsidePanelWrapper', 'notAppAsidePanel', 'app', 'mobileApp')); },
 };
