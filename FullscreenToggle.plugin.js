@@ -3,7 +3,7 @@
  * @author programmer2514
  * @authorId 563652755814875146
  * @description A BetterDiscord plugin to easily make Discord fullscreen
- * @version 1.0.1
+ * @version 2.0.0
  * @donate https://ko-fi.com/benjaminpryor
  * @patreon https://www.patreon.com/BenjaminPryor
  * @website https://github.com/programmer2514/BetterDiscord-FullscreenToggle
@@ -12,11 +12,14 @@
 
 // Abstract settings calls
 const settings = {
-  get fullscreenElement() { return this._fullscreenElement ?? (this._fullscreenElement = runtime.api.Data.load('fullscreen-element') ?? 'window-no-bar'); },
+  get fullscreenElement() { return this._fullscreenElement ?? (this._fullscreenElement = runtime.api.Data.load('fullscreen-element') ?? 'window'); },
   set fullscreenElement(v) { runtime.api.Data.save('fullscreen-element', this._fullscreenElement = v); },
 
   get fullscreenElementCustom() { return this._fullscreenElementCustom ?? (this._fullscreenElementCustom = runtime.api.Data.load('fullscreen-element-custom') ?? ''); },
   set fullscreenElementCustom(v) { runtime.api.Data.save('fullscreen-element-custom', this._fullscreenElementCustom = v); },
+
+  get fullscreenElementCustomCSS() { return this._fullscreenElementCustomCSS ?? (this._fullscreenElementCustomCSS = runtime.api.Data.load('fullscreen-element-custom-css') ?? ''); },
+  set fullscreenElementCustomCSS(v) { runtime.api.Data.save('fullscreen-element-custom-css', this._fullscreenElementCustomCSS = v); },
 
   get keyboardShortcutEnabled() { return this._keyboardShortcutEnabled ?? (this._keyboardShortcutEnabled = runtime.api.Data.load('keyboard-shortcut-enabled') ?? true); },
   set keyboardShortcutEnabled(v) { runtime.api.Data.save('keyboard-shortcut-enabled', this._keyboardShortcutEnabled = v); },
@@ -35,17 +38,14 @@ const settings = {
 const config = {
   changelog: [
     {
-      title: '1.0.1',
+      title: '2.0.0',
       type: 'added',
       items: [
-        'Removed unnecessary modules',
-      ],
-    },
-    {
-      title: '1.0.0',
-      type: 'added',
-      items: [
-        'Initial release',
+        'Fixed broken fullscreen presets',
+        'Fixed plugin crash when custom element is set but not specified',
+        'Combined permanently broken Window preset with Window (No top bar) preset',
+        'Added new fullscreen preset: Inner Window (no top bar/server list)',
+        'Added Custom Fullscreen Element CSS setting',
       ],
     },
   ],
@@ -62,8 +62,8 @@ const config = {
           value: 'window',
         },
         {
-          label: 'Window (No top bar)',
-          value: 'window-no-bar',
+          label: 'Inner Window',
+          value: 'inner-window',
         },
         {
           label: 'Chat/Forum + Members List',
@@ -90,6 +90,14 @@ const config = {
       note: 'A CSS selector specifying the element to make fullscreen. Fullscreen Element must be set to "Custom"',
       placeholder: 'Ex: div.className > span#ID',
       get value() { return settings.fullscreenElementCustom; },
+    },
+    {
+      type: 'text',
+      id: 'fullscreenElementCustomCSS',
+      name: 'Custom Fullscreen Element Style (CSS)',
+      note: 'Custom CSS to be applied only while fullscreen. Fullscreen Element must be set to "Custom"',
+      placeholder: 'Ex: div.className > span#ID { min-width: 100% !important; }',
+      get value() { return settings.fullscreenElementCustomCSS; },
     },
     {
       type: 'switch',
@@ -124,6 +132,12 @@ const modules = {
   get icons() { return this._icons ?? (this._icons = runtime.api.Webpack.getByKeys('selected', 'iconWrapper', 'clickable', 'icon')); },
   get guilds() { return this._guilds ?? (this._guilds = runtime.api.Webpack.getByKeys('chatContent', 'noChat', 'parentChannelName', 'linkedLobby')); },
   get app() { return this._app ?? (this._app = runtime.api.Webpack.getByKeys('appAsidePanelWrapper', 'notAppAsidePanel', 'app', 'mobileApp')); },
+  get sidebar() { return this._sidebar ?? (this._sidebar = runtime.api.Webpack.getByKeys('sidebar', 'activityPanel', 'sidebarListRounded')); },
+  get social() { return this._social ?? (this._social = runtime.api.Webpack.getByKeys('inviteToolbar', 'peopleColumn', 'addFriend')); },
+  get panel() { return this._panel ?? (this._panel = runtime.api.Webpack.getByKeys('outer', 'inner', 'overlay')); },
+  get game() { return this._game ?? (this._game = runtime.api.Webpack.getByKeys('openOnHover', 'userSection', 'thumbnail')); },
+  get effects() { return this._effects ?? (this._effects = runtime.api.Webpack.getByKeys('profileEffects', 'hovered', 'effect')); },
+  get threads() { return this._threads ?? (this._threads = runtime.api.Webpack.getByKeys('uploadArea', 'newMemberBanner', 'mainCard', 'newPostsButton')); },
 };
 
 // Declare runtime object structure
@@ -168,6 +182,9 @@ module.exports = class CollapsibleUI {
     // Subscribe listeners
     this.addListeners();
 
+    // Add/update fullscreen styling
+    this.updateFullscreenStyling();
+
     // Initialize the plugin
     settings.toggled = false;
     this.createToolbarButton();
@@ -178,6 +195,9 @@ module.exports = class CollapsibleUI {
   stop = () => {
     // Unsubscribe listeners
     runtime.controller.abort();
+
+    // Update/remove fullscreen styling
+    this.updateFullscreenStyling();
 
     // Terminate the plugin
     runtime.button.remove();
@@ -253,33 +273,118 @@ module.exports = class CollapsibleUI {
       if ((document.fullscreenElement && !settings.toggled) || (!document.fullscreenElement && settings.toggled)) {
         settings.toggled = !settings.toggled;
         if (runtime.button) runtime.button.querySelector(`svg`).innerHTML = (settings.toggled) ? icons.exit : icons.enter;
+        this.updateFullscreenStyling();
       }
     }, { passive: true, signal: runtime.controller.signal });
   };
 
-  // Toggles the button at the specified index
+  // Toggles the fullscreen button
   toggleFullscreen = () => {
     if (this.getFullscreenElement()) {
-      if (!settings.toggled) this.getFullscreenElement()?.requestFullscreen();
-      else if (document.fullscreenElement) document.exitFullscreen();
+      if (!settings.toggled) {
+        this.getFullscreenElement()?.requestFullscreen()?.then(this.updateFullscreenStyling);
+      }
+      else if (document.fullscreenElement) {
+        document.exitFullscreen()?.then(this.updateFullscreenStyling);
+      }
     }
   };
 
   // Get the element to make fullscreen
   getFullscreenElement = () => {
     switch (settings.fullscreenElement) {
-      case 'window-no-bar':
-        return document.querySelector(`.${modules.app?.appAsidePanelWrapper}`);
       case 'chat-members':
-        return document.querySelector(`.${modules.guilds?.content}`);
+        return document.querySelector(`.${modules.guilds?.chat}`) ?? document.querySelector(`.${modules.social?.container}`);
       case 'chat':
-        return document.querySelector(`.${modules.guilds?.chatContent}`);
+        return document.querySelector(`.${modules.guilds?.chatContent}`) ?? document.querySelector(`.${modules.threads?.container}`) ?? document.querySelector(`.${modules.social?.peopleColumn}`);
       case 'members':
-        return document.querySelector(`.${modules.members?.membersWrap}`);
+        return document.querySelector(`.${modules.members?.membersWrap}`) ?? document.querySelector(`.${modules.panel?.outer}`) ?? document.querySelector(`.${modules.social?.nowPlayingColumn}`);
       case 'custom':
-        return document.querySelector(`${settings.fullscreenElementCustom}`);
+        if (settings.fullscreenElementCustom) return document.querySelector(`${settings.fullscreenElementCustom}`);
+        else return null;
       default:
-        return document.body;
+        return document.querySelector(`.${modules.app?.appAsidePanelWrapper}`);
+    }
+  };
+
+  // Update the necessary styling to make fullscreen elements look good
+  updateFullscreenStyling = () => {
+    if (document.fullscreenElement) {
+      switch (settings.fullscreenElement) {
+        case 'window':
+          runtime.api.DOM.addStyle(runtime.meta.name, `
+            .${modules.sidebar?.base} {
+              --custom-app-top-bar-height: 0;
+            }
+          `);
+          return;
+        case 'inner-window':
+          runtime.api.DOM.addStyle(runtime.meta.name, `
+            .${modules.sidebar?.base} {
+              --custom-app-top-bar-height: 0;
+            }
+
+            .${modules.sidebar?.guilds} {
+              display: none !important;
+            }
+
+            .${modules.sidebar?.sidebarList} {
+              border-radius: 0 !important;
+            }
+          `);
+          return;
+        case 'chat':
+          runtime.api.DOM.addStyle(runtime.meta.name, `
+            .${modules.social?.peopleColumn} {
+              background-color: var(--bg-overlay-chat, var(--background-base-lower));
+            }
+          `);
+          return;
+        case 'members':
+          if (document.querySelector(`.${modules.panel?.outer} header > svg`)) document.querySelector(`.${modules.panel?.outer} header > svg`).style.maxHeight = document.querySelector(`.${modules.panel?.outer} header > svg`).style.minHeight;
+          document.querySelector(`.${modules.panel?.outer} header > svg > mask > rect`)?.setAttribute('width', '500%');
+          document.querySelector(`.${modules.panel?.outer} header > svg`)?.removeAttribute('viewBox');
+          runtime.api.DOM.addStyle(runtime.meta.name, `
+            .${modules.members?.membersWrap},
+            .${modules.members?.membersWrap} > *,
+            .${modules.guilds?.content} .${modules.panel?.outer} > * {
+              width: 100% !important;
+            }
+
+            .${modules.members?.member},
+            .${modules.game?.container} {
+              max-width: 100% !important;
+            }
+
+            .${modules.guilds?.content} .${modules.panel?.outer} header > svg {
+              min-width: 100% !important;
+            }
+
+            .${modules.guilds?.content} .${modules.panel?.outer} header > svg > mask > rect {
+              width: 500% !important;
+            }
+
+            .${modules.guilds?.content} .${modules.panel?.outer} .${modules.effects?.effect} {
+              min-height: 100% !important;
+            }
+
+            .${modules.social?.nowPlayingColumn} {
+              display: initial !important;
+            }
+          `);
+          return;
+        case 'custom':
+          runtime.api.DOM.addStyle(runtime.meta.name, settings.fullscreenElementCustomCSS);
+          return;
+        default:
+          return;
+      }
+    }
+    else {
+      runtime.api.DOM.removeStyle(runtime.meta.name);
+      document.querySelector(`.${modules.guilds?.content} .${modules.panel?.outer} header > svg`)?.style.removeProperty('max-height');
+      document.querySelector(`.${modules.guilds?.content} .${modules.panel?.outer} header > svg > mask > rect`)?.setAttribute('width', '100%');
+      document.querySelector(`.${modules.guilds?.content} .${modules.panel?.outer} header > svg`)?.setAttribute('viewBox', `0 0 ${parseInt(document.querySelector(`.${modules.panel?.outer} header > svg`)?.style.minWidth)} ${parseInt(document.querySelector(`.${modules.panel?.outer} header > svg`)?.style.minHeight)}`);
     }
   };
 };
