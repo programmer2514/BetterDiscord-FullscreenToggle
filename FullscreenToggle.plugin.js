@@ -3,7 +3,7 @@
  * @author programmer2514
  * @authorId 563652755814875146
  * @description A BetterDiscord plugin to easily make Discord fullscreen
- * @version 2.0.0
+ * @version 2.0.1
  * @donate https://ko-fi.com/benjaminpryor
  * @patreon https://www.patreon.com/BenjaminPryor
  * @website https://github.com/programmer2514/BetterDiscord-FullscreenToggle
@@ -38,14 +38,10 @@ const settings = {
 const config = {
   changelog: [
     {
-      title: '2.0.0',
+      title: '2.0.1',
       type: 'added',
       items: [
-        'Fixed broken fullscreen presets',
-        'Fixed plugin crash when custom element is set but not specified',
-        'Combined permanently broken Window preset with Window (No top bar) preset',
-        'Added new fullscreen preset: Inner Window (no top bar/server list)',
-        'Added Custom Fullscreen Element CSS setting',
+        'Improved compatibility with other plugins',
       ],
     },
   ],
@@ -185,6 +181,13 @@ module.exports = class CollapsibleUI {
     // Add/update fullscreen styling
     this.updateFullscreenStyling();
 
+    // Add root styling
+    runtime.api.DOM.addStyle(`${runtime.meta.name}-root`, `
+      :root {
+        --fst-server-list-collapsed: 0;
+      }
+    `);
+
     // Initialize the plugin
     settings.toggled = false;
     this.createToolbarButton();
@@ -198,6 +201,9 @@ module.exports = class CollapsibleUI {
 
     // Update/remove fullscreen styling
     this.updateFullscreenStyling();
+
+    // Remove root styling
+    runtime.api.DOM.removeStyle(`${runtime.meta.name}-root`);
 
     // Terminate the plugin
     runtime.button.remove();
@@ -322,6 +328,10 @@ module.exports = class CollapsibleUI {
           runtime.api.DOM.addStyle(runtime.meta.name, `
             .${modules.sidebar?.base} {
               --custom-app-top-bar-height: 0;
+            }
+
+            .${modules.sidebar?.panels} {
+              --fst-server-list-collapsed: 1;
             }
 
             .${modules.sidebar?.guilds} {
