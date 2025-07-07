@@ -3,7 +3,7 @@
  * @author programmer2514
  * @authorId 563652755814875146
  * @description A BetterDiscord plugin to easily make Discord fullscreen
- * @version 2.0.1
+ * @version 2.1.0
  * @donate https://ko-fi.com/benjaminpryor
  * @patreon https://www.patreon.com/BenjaminPryor
  * @website https://github.com/programmer2514/BetterDiscord-FullscreenToggle
@@ -38,10 +38,11 @@ const settings = {
 const config = {
   changelog: [
     {
-      title: '2.0.1',
+      title: '2.1.0',
       type: 'added',
       items: [
-        'Improved compatibility with other plugins',
+        'Added theme-friendly default options',
+        'Added Translucence compatibility',
       ],
     },
   ],
@@ -54,11 +55,11 @@ const config = {
       get value() { return settings.fullscreenElement; },
       options: [
         {
-          label: 'Window',
+          label: 'Window (theme-friendly)',
           value: 'window',
         },
         {
-          label: 'Inner Window',
+          label: 'Inner Window (theme-friendly)',
           value: 'inner-window',
         },
         {
@@ -127,7 +128,7 @@ const modules = {
   get members() { return this._members ?? (this._members = runtime.api.Webpack.getByKeys('membersWrap', 'hiddenMembers', 'roleIcon')); },
   get icons() { return this._icons ?? (this._icons = runtime.api.Webpack.getByKeys('selected', 'iconWrapper', 'clickable', 'icon')); },
   get guilds() { return this._guilds ?? (this._guilds = runtime.api.Webpack.getByKeys('chatContent', 'noChat', 'parentChannelName', 'linkedLobby')); },
-  get app() { return this._app ?? (this._app = runtime.api.Webpack.getByKeys('appAsidePanelWrapper', 'notAppAsidePanel', 'app', 'mobileApp')); },
+  get app() { return this._app ?? (this._app = runtime.api.Webpack.getByKeys('app', 'layers')); },
   get sidebar() { return this._sidebar ?? (this._sidebar = runtime.api.Webpack.getByKeys('sidebar', 'activityPanel', 'sidebarListRounded')); },
   get social() { return this._social ?? (this._social = runtime.api.Webpack.getByKeys('inviteToolbar', 'peopleColumn', 'addFriend')); },
   get panel() { return this._panel ?? (this._panel = runtime.api.Webpack.getByKeys('outer', 'inner', 'overlay')); },
@@ -152,7 +153,7 @@ const runtime = {
 };
 
 // Export plugin class
-module.exports = class CollapsibleUI {
+module.exports = class FullscreenToggle {
   // Get api and metadata
   constructor(meta) {
     runtime.meta = meta;
@@ -198,6 +199,9 @@ module.exports = class CollapsibleUI {
   stop = () => {
     // Unsubscribe listeners
     runtime.controller.abort();
+
+    // Exit fullscreen
+    document.exitFullscreen();
 
     // Update/remove fullscreen styling
     this.updateFullscreenStyling();
@@ -309,7 +313,7 @@ module.exports = class CollapsibleUI {
         if (settings.fullscreenElementCustom) return document.querySelector(`${settings.fullscreenElementCustom}`);
         else return null;
       default:
-        return document.querySelector(`.${modules.app?.appAsidePanelWrapper}`);
+        return document.body;
     }
   };
 
@@ -322,6 +326,14 @@ module.exports = class CollapsibleUI {
             .${modules.sidebar?.base} {
               --custom-app-top-bar-height: 0;
             }
+
+            ${(runtime.api.Themes.isEnabled('Translucence'))
+              ? `
+                .${modules.app?.layers} {
+                  margin-top: var(--app-margin) !important;
+                }
+              `
+              : ''}
           `);
           return;
         case 'inner-window':
@@ -341,6 +353,14 @@ module.exports = class CollapsibleUI {
             .${modules.sidebar?.sidebarList} {
               border-radius: 0 !important;
             }
+
+            ${(runtime.api.Themes.isEnabled('Translucence'))
+              ? `
+                .${modules.app?.layers} {
+                  margin-top: var(--app-margin) !important;
+                }
+              `
+              : ''}
           `);
           return;
         case 'chat':
