@@ -3,7 +3,7 @@
  * @author programmer2514
  * @authorId 563652755814875146
  * @description A BetterDiscord plugin to easily make Discord fullscreen
- * @version 2.1.0
+ * @version 2.1.1
  * @donate https://ko-fi.com/benjaminpryor
  * @patreon https://www.patreon.com/BenjaminPryor
  * @website https://github.com/programmer2514/BetterDiscord-FullscreenToggle
@@ -27,7 +27,7 @@ const settings = {
   get toggled() { return this._toggled ?? (this._toggled = runtime.api.Data.load('toggled') ?? false); },
   set toggled(v) { runtime.api.Data.save('toggled', this._toggled = v); },
 
-  get toggleShortcut() { return this._toggleShortcut ?? (this._toggleShortcut = new Set(runtime.api.Data.load('toggle-shortcut') ?? ['F11'])); },
+  get toggleShortcut() { return this._toggleShortcut ?? (this._toggleShortcut = new Set(runtime.api.Data.load('toggle-shortcut') ?? ['Control', 'f'])); },
   set toggleShortcut(v) {
     runtime.api.Data.save('toggle-shortcut', v);
     this._toggleShortcut = new Set(v);
@@ -38,11 +38,10 @@ const settings = {
 const config = {
   changelog: [
     {
-      title: '2.1.0',
+      title: '2.1.1',
       type: 'added',
       items: [
-        'Added theme-friendly default options',
-        'Added Translucence compatibility',
+        'Changed default shortcut from F11 to Ctrl+F to avoid conflict with vanilla Discord',
       ],
     },
   ],
