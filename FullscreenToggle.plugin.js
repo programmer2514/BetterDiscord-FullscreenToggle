@@ -3,7 +3,7 @@
  * @author programmer2514
  * @authorId 563652755814875146
  * @description A BetterDiscord plugin to easily make Discord fullscreen
- * @version 2.1.1
+ * @version 2.1.2
  * @donate https://ko-fi.com/benjaminpryor
  * @patreon https://www.patreon.com/BenjaminPryor
  * @website https://github.com/programmer2514/BetterDiscord-FullscreenToggle
@@ -38,10 +38,10 @@ const settings = {
 const config = {
   changelog: [
     {
-      title: '2.1.1',
+      title: '2.1.2',
       type: 'added',
       items: [
-        'Changed default shortcut from F11 to Ctrl+F to avoid conflict with vanilla Discord',
+        'Fixed plugin crash on Discord startup',
       ],
     },
   ],
@@ -233,6 +233,12 @@ module.exports = class FullscreenToggle {
 
   // Create a functional toolbar button
   createToolbarButton = () => {
+    // If toolbar doesn't exist, wait
+    if (!document.querySelector(`.${modules.icons?.toolbar}`)) {
+      setTimeout(() => this.createToolbarButton(), 250);
+      return;
+    }
+
     // Get button text
     let text = locale.current + ' (' + [...settings.toggleShortcut].map(e => (e.length === 1 ? e.toUpperCase() : e)).join('+') + ')';
 
@@ -244,15 +250,17 @@ module.exports = class FullscreenToggle {
         </svg>
       </div>
     `, true);
-    document.querySelector(`.${modules.icons?.toolbar}`).appendChild(button);
+    document.querySelector(`.${modules.icons?.toolbar}`)?.appendChild(button);
 
     // Remove old button and get new one
     runtime.button?.remove();
     runtime.button = document.querySelector(`#fst-button`);
 
     // Add tooltip and click handler
-    runtime.api.UI.createTooltip(runtime.button, text, { side: 'left' });
-    runtime.button.addEventListener('click', () => this.toggleFullscreen());
+    if (runtime.button) {
+      runtime.api.UI.createTooltip(runtime.button, text, { side: 'left' });
+      runtime.button.addEventListener('click', () => this.toggleFullscreen());
+    }
   };
 
   // Add event listeners to handle resize/expand on hover
